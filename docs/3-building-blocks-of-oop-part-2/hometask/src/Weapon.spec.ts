@@ -2,7 +2,6 @@
 
 import { Weapon } from "./Weapon";
 
-// @ts-expect-error
 new Weapon("bow", 1, 0.5, 2, 1);
 
 class WeaponWithImplementation extends Weapon {
@@ -37,14 +36,14 @@ describe("Weapon", () => {
 
   describe("use()", () => {
     it("should return proper string for weapon that does not break", () => {
-      expect(weapon.use()).toEqual("You use the bow, dealing 0.05 points of damage.");
+      expect(weapon.use()).toEqual("You use the bow, dealing 1.00 points of damage.");
       expect(weapon.toString()).toEqual("bow − Value: 2.00, Weight: 1.00, Damage: 1.00, Durability: 45.00%");
     });
 
     it("should return proper string for weapon that breaks", () => {
       weapon = new WeaponWithImplementation("bow", 1, 0.05, 2, 1);
 
-      expect(weapon.use()).toEqual("You use the bow, dealing 0.05 points of damage.\nThe bow breaks.");
+      expect(weapon.use()).toEqual("You use the bow, dealing 1.00 points of damage.\nThe bow breaks.");
       expect(weapon.toString()).toEqual("bow − Value: 2.00, Weight: 1.00, Damage: 1.00, Durability: 0.00%");
     });
 
