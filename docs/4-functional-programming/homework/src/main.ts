@@ -1,4 +1,4 @@
-import { Either, fromPromise, ap, right, getOrElse, flatten } from './fp/either';
+import { Either, fromPromise, ap, right, left, getOrElse, flatten } from './fp/either';
 import { pipe } from './fp/utils';
 import { fetchClient, fetchExecutor } from './fetching';
 import { ClientUser, ExecutorUser } from './types';
@@ -6,15 +6,35 @@ import { ClientUser, ExecutorUser } from './types';
 type Response<R> = Promise<Either<string, R>>
 
 const getExecutor = (): Response<ExecutorUser> => fromPromise(fetchExecutor());
-const getClients = (): Response<Array<ClientUser>> => fromPromise(fetchClient());
+const getClients = (): Response<Array<ClientUser>> => fromPromise(fetchClient()
+  .then(clients => clients
+    .map(client => ({...client, demands: client.demands?{_tag: 'Some', value: client.demands}:{_tag: 'None'}}))
+));
 
 export enum SortBy {
   distance = 'distance',
   reward = 'reward',
 }
 
-export const show = (sortBy: SortBy) => (clients: Array<ClientUser>) => (executor: ExecutorUser): Either<string, string> => {
-
+export const show = (sortBy: SortBy) => (clients: Array<any>) => (executor: ExecutorUser): any => {
+  return executor.possibilities.length ?
+  right(clients
+  .filter(client => Array.isArray(client.demands.value) && executor.possibilities.some(possibility => client.demands.value.includes(possibility))||!client.demands.value)
+  .map(
+    client => {
+      return  ({name:client.name, distance: Math.sqrt(Math.pow(executor.position.x - client.position.x, 2) + Math.pow(executor.position.y - client.position.y, 2)).toFixed(3), reward: client.reward})}
+  )
+  .sort((a,b)=>{return sortBy === SortBy.distance ? Number(a.distance) - Number(b.distance) : b.reward - a.reward})
+  .reduce((acc, e, i, arr) => {
+    if(acc.length === 0){
+      acc+=`${arr.length===clients.length?
+        'This executor meets all demands of all clients!':
+        `This executor meets the demands of only ${arr.length} out of ${clients.length} clients`}\n\nAvailable clients sorted by ${sortBy === SortBy.reward ?
+           `highest ${sortBy}` : `distance to executor`}:\n`
+    }
+    acc+= `name: ${e.name}, distance: ${e.distance}, reward: ${e.reward}${i<arr.length-1?'\n':''}`;
+    return acc;
+  }, '')):left('This executor cannot meet the demands of any client!')
 };
 
 export const main = (sortBy: SortBy): Promise<string> => (
